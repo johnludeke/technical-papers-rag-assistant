@@ -33,10 +33,10 @@ def test_evaluation_framework():
         citation_metrics = evaluator.evaluate_citations(response, available_citations)
         assert citation_metrics['citation_accuracy'] == 1.0
 
-        print("   ✅ Evaluation framework works correctly")
+        print("   [PASS] Evaluation framework works correctly")
         return True
     except Exception as e:
-        print(f"   ❌ Evaluation test failed: {e}")
+        print(f"   [FAIL] Evaluation test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -52,10 +52,10 @@ def test_llm_generator_import():
         config = GenerationConfig(max_new_tokens=100)
         assert config.max_new_tokens == 100
 
-        print("   ✅ LLM generator module imports correctly")
+        print("   [PASS] LLM generator module imports correctly")
         return True
     except Exception as e:
-        print(f"   ❌ LLM generator import failed: {e}")
+        print(f"   [FAIL] LLM generator import failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -81,10 +81,10 @@ def test_rag_pipeline_updates():
         # Check for LLM generator import
         assert 'from .llm_generator import' in content, "LLM generator import missing"
 
-        print("   ✅ RAG pipeline has been updated correctly")
+        print("   [PASS] RAG pipeline has been updated correctly")
         return True
     except Exception as e:
-        print(f"   ❌ RAG pipeline test failed: {e}")
+        print(f"   [FAIL] RAG pipeline test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -115,10 +115,10 @@ def test_citation_formatting():
         assert hasattr(LLMGenerator, '_build_prompt')
         assert hasattr(LLMGenerator, 'format_response_with_sources')
 
-        print("   ✅ Citation formatting methods exist")
+        print("   [PASS] Citation formatting methods exist")
         return True
     except Exception as e:
-        print(f"   ❌ Citation formatting test failed: {e}")
+        print(f"   [FAIL] Citation formatting test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -147,18 +147,18 @@ def main():
     total = len(results)
 
     for name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = "[PASS] PASS" if result else "[FAIL] FAIL"
         print(f"{status}: {name}")
 
     print(f"\n{passed}/{total} tests passed")
 
     if passed == total:
-        print("\n🎉 All components are working correctly!")
-        print("\n📝 System Features:")
-        print("   ✅ LLM generator with Qwen-3 support")
-        print("   ✅ Citation tracking and formatting")
-        print("   ✅ Evaluation framework with metrics")
-        print("   ✅ Updated RAG pipeline with generation")
+        print("\nSuccess: All components are working correctly!")
+        print("\nFeatures: System Features:")
+        print("   [PASS] LLM generator with Qwen-3 support")
+        print("   [PASS] Citation tracking and formatting")
+        print("   [PASS] Evaluation framework with metrics")
+        print("   [PASS] Updated RAG pipeline with generation")
         print("\nTo run the full demo (requires downloading models):")
         print("   python demo.py")
         return True

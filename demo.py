@@ -15,7 +15,7 @@ from src.evaluation import RAGEvaluator, TestQuery
 
 def main():
     """Run demo with LLM generation and evaluation."""
-    print("🚀 EmbeddingGemma RAG Assistant Demo")
+    print("EmbeddingGemma RAG Assistant Demo")
     print("="*70)
 
     # Initialize pipeline with LLM
@@ -29,15 +29,15 @@ def main():
             llm_model_name="Qwen/Qwen2.5-1.5B-Instruct",
             use_llm=True
         )
-        print("   ✓ Pipeline initialized successfully")
+        print("   Pipeline initialized successfully")
     except Exception as e:
-        print(f"   ⚠️  Could not initialize full pipeline: {e}")
+        print(f"   Warning: Could not initialize full pipeline: {e}")
         print("   Trying with embedding-only mode...")
         pipeline = RAGPipeline(
             embedding_model_name="sentence-transformers/all-MiniLM-L6-v2",
             use_llm=False
         )
-        print("   ✓ Pipeline initialized in embedding-only mode")
+        print("   Pipeline initialized in embedding-only mode")
 
     # Check if we have an existing vector store
     vector_store_exists = os.path.exists("data/vector_stores/ml_papers")
@@ -53,18 +53,18 @@ def main():
                 max_papers=5,  # Start with fewer papers for faster testing
                 store_name="ml_papers"
             )
-            print("   ✓ Pipeline built successfully")
+            print("   Pipeline built successfully")
         except Exception as e:
-            print(f"   ✗ Failed to build pipeline: {e}")
+            print(f"   Error: Failed to build pipeline: {e}")
             print("   Please check your internet connection and try again")
             return False
     else:
         print("\n2. Loading existing vector store...")
         try:
             pipeline.load_vector_store("ml_papers")
-            print("   ✓ Vector store loaded successfully")
+            print("   Vector store loaded successfully")
         except Exception as e:
-            print(f"   ✗ Failed to load vector store: {e}")
+            print(f"   Error: Failed to load vector store: {e}")
             return False
 
     # Test retrieval
@@ -114,7 +114,7 @@ def main():
                 print(pipeline.llm_generator.format_response_with_sources(response))
 
             except Exception as e:
-                print(f"   ✗ Generation failed: {e}")
+                print(f"   Error: Generation failed: {e}")
                 import traceback
                 traceback.print_exc()
     else:
@@ -151,21 +151,21 @@ def main():
         evaluator.print_metrics(metrics)
 
     except Exception as e:
-        print(f"   ⚠️  Evaluation failed: {e}")
+        print(f"   Warning: Evaluation failed: {e}")
         print("   This is expected if test queries don't match your papers")
 
     # Summary
     print("\n" + "="*70)
-    print("📊 Demo Summary")
+    print("Demo Summary")
     print("="*70)
-    print("✅ Retrieval pipeline with embeddings")
-    print("✅ Citation tracking and formatting")
+    print("[OK] Retrieval pipeline with embeddings")
+    print("[OK] Citation tracking and formatting")
     if pipeline.llm_generator:
-        print("✅ LLM-based response generation")
+        print("[OK] LLM-based response generation")
     else:
-        print("⚠️  LLM generation (not available)")
-    print("✅ Evaluation framework")
-    print("\n🎯 System Status: OPERATIONAL")
+        print("[SKIP] LLM generation (not available)")
+    print("[OK] Evaluation framework")
+    print("\nSystem Status: OPERATIONAL")
     print("   - Semantic search working")
     print("   - LLM generation with citations functional")
     print("   - Evaluation metrics available")
