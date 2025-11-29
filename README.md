@@ -1,116 +1,345 @@
 # EmbeddingGemma Powered RAG Assistant
-CS 410, Professor Pablo Robles-Granda
 
-Justin Kobza, John Ludeke, Daniel Vlassov, Amber Wilt  
-University of Illinois Urbana-Champaign
+A Retrieval-Augmented Generation (RAG) system for scientific document search and question answering with proper source citations.
 
-## Overview
+**CS 410 Final Project** | University of Illinois Urbana-Champaign
+Justin Kobza, John Ludeke, Daniel Vlassov, Amber Wilt
 
-This repository implements a RAG (Retrieval-Augmented Generation) system for scientific document retrieval. The system downloads machine learning papers from arXiv, processes their LaTeX sources, creates text embeddings, and provides semantic search capabilities for finding relevant information across multiple documents.
+---
 
-## Week 1
+## What This Does
 
-### What We Built
+Ask questions about machine learning papers and get answers with citations:
 
-Week 1 focuses on the data processing pipeline: downloading papers, extracting text, creating searchable chunks, and building a vector database for retrieval.
+```
+Q: "What is the attention mechanism?"
 
-**Components Implemented:**
-- arXiv API client for downloading ML papers
-- LaTeX text extraction and cleaning pipeline
-- Text chunking strategy with overlap
-- TF-IDF embedding generation and transformer-based embeddings (EmbeddingGemma/all-MiniLM-L6-v2)
-- FAISS vector store with metadata tracking
-- Complete document retrieval pipeline
+A: The attention mechanism [1] is a technique that allows neural networks
+   to focus on different parts of the input when producing output. In
+   transformers, self-attention [1] enables the model to weigh different
+   words. Multi-head attention [2] extends this by learning multiple
+   patterns in parallel.
 
-### How to Run
+Sources:
+[1] Attention Is All You Need (arxiv:1706.03762)
+    Section: Introduction | Relevance: 0.92
+[2] Attention Is All You Need (arxiv:1706.03762)
+    Section: Model Architecture | Relevance: 0.88
+```
 
-#### 1. Install Dependencies
+---
+
+## Quick Start
+
+### 1. Install
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 2. Run the Full Pipeline Demo
+### 2. Test (No Downloads)
 
 ```bash
-python run_full_demo.py
+python test_components.py
 ```
 
-**What this does:**
-- Searches arXiv for ML papers about "transformer attention"
-- Downloads the first paper's LaTeX source
-- Extracts and cleans the text content
-- Splits the document into overlapping chunks
-- Generates TF-IDF embeddings for each chunk
-- Builds a FAISS vector store for fast similarity search
-- Tests retrieval with sample queries
+Expected: `✅ 4/4 tests passed`
 
-**Expected Result:**
-- Downloads 2 papers from arXiv
-- Processes 20-100+ text chunks depending on paper length (uses 200-token chunks with 50-token overlap)
-- Creates TF-IDF embeddings (dimension varies by vocabulary size, typically 1000-3000 for full papers)
-- Successfully retrieves relevant chunks for test queries
-- Shows similarity scores and retrieved text snippets
-
-#### 3. Run Component Tests
+### 3. Run Demo (Downloads Models)
 
 ```bash
-python demo_rag.py
+python demo.py
 ```
 
-This runs individual component tests to verify each piece works correctly.
+First run downloads ~3-6 GB of models and papers (10-30 minutes).
 
-### File Structure and Purpose
+---
 
-```
-src/
-├── arxiv_client.py          # Downloads papers from arXiv API
-├── latex_parser.py          # Extracts clean text from LaTeX sources
-├── text_chunker.py          # Splits documents into overlapping chunks
-├── simple_embedding.py      # Generates TF-IDF embeddings
-├── embedding_pipeline.py    # Generates transformer-based embeddings (EmbeddingGemma)
-├── vector_store.py          # FAISS-based vector database
-└── rag_pipeline.py          # Main pipeline that coordinates everything
-
-run_full_demo.py             # Complete end-to-end demonstration
-demo_rag.py                  # Component testing and validation
-test_rag_system.py           # Comprehensive system tests
-requirements.txt             # Python dependencies
-```
-
-**Detailed File Descriptions:**
-
-- **`arxiv_client.py`**: Handles arXiv API communication. Searches for papers by category (cs.LG, cs.AI, etc.) and downloads both PDF and LaTeX source files. Includes rate limiting to be respectful to arXiv servers.
-
-- **`latex_parser.py`**: Processes LaTeX documents to extract clean text. Removes LaTeX commands, equations, and formatting while preserving document structure. Identifies sections like Introduction, Method, Results, etc.
-
-- **`text_chunker.py`**: Splits documents into overlapping chunks for embedding generation. Uses sentence-based splitting with configurable chunk size and overlap. Preserves metadata like section titles and document IDs.
-
-- **`simple_embedding.py`**: Creates TF-IDF embeddings from text chunks. This is a lightweight alternative for testing and prototyping. Builds vocabulary from all documents and calculates term frequency-inverse document frequency scores with L2 normalization.
-
-- **`embedding_pipeline.py`**: Generates high-quality embeddings using transformer models (SentenceTransformer). Supports EmbeddingGemma (`google/gemma-2-2b-it`) and falls back to `all-MiniLM-L6-v2` (384-dimensional). Includes batch processing, GPU acceleration, and progress tracking for efficient embedding generation at scale.
-
-- **`vector_store.py`**: Implements FAISS vector database for fast similarity search. Stores embeddings with metadata, handles cosine similarity calculations, and provides top-k retrieval functionality. Supports multiple index types (flat, IVF, HNSW) and includes save/load functionality for persistence.
-
-- **`rag_pipeline.py`**: Orchestrates the entire pipeline from paper download to retrieval. Provides high-level interface for building complete systems and querying the vector store.
-
-### Architecture
+## How It Works
 
 ```
-arXiv Papers → LaTeX Extraction → Text Chunking → Embeddings → Vector Store → Retrieval
+User Question
+    ↓
+Convert to embedding vector
+    ↓
+Search vector database (FAISS)
+    ↓
+Retrieve relevant paper chunks
+    ↓
+Format with citation markers [1], [2]...
+    ↓
+Send to LLM (Qwen-3)
+    ↓
+Generate answer with inline citations
+    ↓
+Map citations to source papers
 ```
 
-1. **Download**: Search and download papers from arXiv
-2. **Parse**: Extract clean text from LaTeX sources
-3. **Chunk**: Split documents into overlapping segments
-4. **Embed**: Generate vector representations of text chunks
-5. **Store**: Build searchable vector database
-6. **Retrieve**: Find relevant chunks for user queries
+---
 
-### Next Steps (Week 2)
+## Project Structure
 
-- Integrate Qwen-3 LLM for response generation
-- Implement proper citation formatting
-- Add query preprocessing and expansion
-- Build evaluation metrics
-- Create simple UI demo
+```
+├── src/                      # Core library
+│   ├── arxiv_client.py      # Download papers
+│   ├── latex_parser.py      # Extract text from LaTeX
+│   ├── text_chunker.py      # Split into chunks
+│   ├── embedding_pipeline.py # Create embeddings
+│   ├── vector_store.py      # FAISS database
+│   ├── llm_generator.py     # LLM + citations
+│   ├── evaluation.py        # Metrics
+│   └── rag_pipeline.py      # Orchestration
+│
+├── demo.py                   # Main demo
+├── test_components.py        # Quick tests
+├── verify_week2_complete.py  # Full verification
+│
+├── docs/                     # Technical docs
+│   ├── ARCHITECTURE.md       # System design
+│   ├── WEEK_2_SUMMARY.md     # Implementation details
+│   └── FILES.md              # File reference
+│
+└── archive/                  # Old deliverables
+    └── week1_deliverables/   # Week 1 reports
+```
+
+---
+
+## Usage
+
+### Basic Usage
+
+```python
+from src.rag_pipeline import RAGPipeline
+
+# Initialize
+pipeline = RAGPipeline()
+pipeline.load_vector_store("ml_papers")
+
+# Ask question
+response = pipeline.query_with_generation(
+    "How does multi-head attention work?",
+    top_k=5
+)
+
+print(response.response)
+```
+
+### Retrieval Only (Faster, No LLM)
+
+```python
+pipeline = RAGPipeline(use_llm=False)
+pipeline.load_vector_store("ml_papers")
+
+result = pipeline.query("What is attention?", top_k=5)
+print(result.context)
+```
+
+### Build Your Own Database
+
+```python
+pipeline = RAGPipeline()
+pipeline.build_complete_pipeline(
+    query="neural networks deep learning",
+    max_papers=10,
+    store_name="my_papers"
+)
+```
+
+---
+
+## Key Features
+
+✅ **Document Processing**
+- Downloads papers from arXiv
+- Extracts text from LaTeX
+- Splits into 200-token chunks with overlap
+
+✅ **Semantic Search**
+- 384-dimensional embeddings
+- FAISS vector database
+- Cosine similarity search
+
+✅ **LLM Generation**
+- Qwen-3 (1.5B parameters)
+- Inline citations [1], [2], [3]...
+- Source attribution
+
+✅ **Evaluation**
+- Precision@K, Recall@K, MRR, NDCG
+- Latency tracking
+- Citation accuracy
+
+---
+
+## Performance
+
+**Typical Latency:**
+- CPU: 2-10 seconds per query
+- GPU: 0.5-2 seconds per query
+
+**Memory:**
+- Embedding model: ~200 MB
+- LLM (1.5B): ~3-6 GB (FP16) or ~1.5-3 GB (8-bit)
+- Vector store: ~100 MB per 1000 papers
+
+---
+
+## Troubleshooting
+
+### Out of Memory?
+
+Use smaller model:
+```python
+pipeline = RAGPipeline(
+    llm_model_name="Qwen/Qwen2.5-0.5B-Instruct"
+)
+```
+
+Or disable LLM:
+```python
+pipeline = RAGPipeline(use_llm=False)
+```
+
+### Slow Generation?
+
+1. Use GPU (automatic if available)
+2. Reduce output length: `GenerationConfig(max_new_tokens=200)`
+3. Use smaller model (0.5B instead of 1.5B)
+
+### No Papers?
+
+First run auto-downloads. To manually build:
+```python
+pipeline.build_complete_pipeline(query="your topic", max_papers=5)
+```
+
+---
+
+## Configuration
+
+### Change Models
+
+```python
+pipeline = RAGPipeline(
+    embedding_model_name="sentence-transformers/all-MiniLM-L6-v2",
+    llm_model_name="Qwen/Qwen2.5-1.5B-Instruct"
+)
+```
+
+### Tune Generation
+
+```python
+from src.llm_generator import GenerationConfig
+
+config = GenerationConfig(
+    max_new_tokens=300,
+    temperature=0.7,
+    top_p=0.9
+)
+
+response = pipeline.query_with_generation(
+    "Question?",
+    generation_config=config
+)
+```
+
+---
+
+## Testing
+
+**Quick test (no downloads):**
+```bash
+python test_components.py
+```
+
+**Full verification:**
+```bash
+python verify_week2_complete.py
+```
+
+**Run demo:**
+```bash
+python demo.py
+```
+
+---
+
+## Documentation
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design decisions
+- **[docs/WEEK_2_SUMMARY.md](docs/WEEK_2_SUMMARY.md)** - Detailed implementation summary
+- **[docs/FILES.md](docs/FILES.md)** - Complete file reference
+
+---
+
+## Development Status
+
+### ✅ Completed (Weeks 1-2)
+- arXiv downloading and LaTeX parsing
+- Text chunking and embeddings
+- Vector database (FAISS)
+- LLM integration (Qwen-3)
+- Citation tracking
+- Evaluation metrics
+- End-to-end pipeline
+
+### 🚧 Week 3 (In Progress)
+- Model quantization
+- Inference optimization
+- Fine-tuning
+- Advanced prompting
+
+### 📅 Week 4 (Planned)
+- Web UI
+- Interactive citations
+- Export functionality
+- User studies
+
+---
+
+## Quick Command Reference
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Test components (fast)
+python test_components.py
+
+# Run full demo (slow, downloads models)
+python demo.py
+
+# Verify everything works
+python verify_week2_complete.py
+```
+
+---
+
+## Team
+
+- **Justin Kobza** - jkobza2@illinois.edu
+- **John Ludeke** - jludeke2@illinois.edu
+- **Daniel Vlassov** - dvlas2@illinois.edu
+- **Amber Wilt** - anwilt2@illinois.edu
+
+**Instructor:** Professor Pablo Robles-Granda
+**Course:** CS 410, Fall 2024
+**University:** University of Illinois Urbana-Champaign
+
+---
+
+## Citation
+
+```bibtex
+@misc{kobza2024embeddinggemma,
+  title={EmbeddingGemma Powered RAG Assistant},
+  author={Justin Kobza and John Ludeke and Daniel Vlassov and Amber Wilt},
+  year={2024},
+  institution={University of Illinois Urbana-Champaign}
+}
+```
+
+---
+
+For questions, see documentation in `docs/` or contact the team.

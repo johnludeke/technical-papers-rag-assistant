@@ -1,0 +1,104 @@
+\documentclass[sigconf]{acmart}
+
+\settopmatter{printacmref=false} % Removes citation info below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % Removes footnote with conference info
+\pagestyle{plain} % Removes running headers
+
+\begin{document}
+
+\title{Week 1 Progress Report: EmbeddingGemma Powered RAG Assistant}
+
+\author{Justin Kobza}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \email{jkobza2@illinois.edu}
+}
+
+\author{John Ludeke}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \email{jludeke2@illinois.edu}
+}
+
+\author{Daniel Vlassov}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \email{dvlas2@illinois.edu}
+}
+
+\author{Amber Wilt}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \email{anwilt2@illinois.edu}
+}
+
+\renewcommand{\shortauthors}{Kobza et al.}
+
+\begin{abstract}
+This report summarizes progress during Week 1 of the EmbeddingGemma Powered RAG Assistant project. The focus was on establishing the core data pipeline for ingestion, text extraction, chunking, and embedding generation—laying the foundation for retrieval and subsequent integration with large language models.
+\end{abstract}
+
+\keywords{Retrieval-Augmented Generation, EmbeddingGemma, FAISS, arXiv, NLP, Information Retrieval}
+
+\maketitle
+
+\section{Introduction}
+The EmbeddingGemma Powered RAG Assistant aims to develop a retrieval-augmented generation (RAG) system for efficient scientific document search and summarization. Week 1 concentrated on constructing the end-to-end data processing pipeline that enables document ingestion, text normalization, chunking, and embedding creation, aligning with the proposed project schedule [1].
+
+\section{Objectives}
+The Week 1 objective, as outlined in the project proposal, was to implement the data ingestion and embedding pipeline:
+\begin{quote}
+``Set up ingestion, chunking, and embedding pipeline.'' [1]
+\end{quote}
+
+\section{Work Completed}
+The following components were designed and implemented:
+
+\begin{itemize}
+  \item \textbf{arXiv API Client:} Automated search and download of machine learning papers.
+  \item \textbf{LaTeX Parser:} Cleaned and extracted readable text from LaTeX sources.
+  \item \textbf{Text Chunker:} Split text into overlapping segments of 200 tokens with 50-token overlap.
+  \item \textbf{Embedding Modules:} Implemented both TF-IDF and transformer-based embeddings (EmbeddingGemma / MiniLM).
+  \item \textbf{FAISS Vector Store:} Built a metadata-backed cosine-similarity search index.
+  \item \textbf{RAG Pipeline:} Coordinated ingestion through retrieval for testing.
+\end{itemize}
+
+Verification through demo scripts confirmed correct extraction, embedding, and retrieval across sample arXiv papers.
+
+\section{Results}
+The full pipeline successfully:
+\begin{itemize}
+  \item Processed 2 arXiv papers, generating 20--100 text chunks per paper.
+  \item Created embeddings of dimensions $\sim$384 (transformer) and 1000--3000 (TF-IDF).
+  \item Retrieved relevant chunks with accurate similarity scoring.
+  \item Executed reliably on local hardware with GPU acceleration for transformer embeddings.
+\end{itemize}
+
+\section{Challenges}
+Key challenges encountered included:
+\begin{itemize}
+  \item Complex LaTeX macros requiring extensive cleaning.
+  \item Initial embedding dimension mismatches during FAISS indexing.
+  \item GPU memory optimization for transformer batch inference.
+\end{itemize}
+
+Each issue was resolved through iterative testing and optimization.
+
+\section{Next Steps}
+Planned Week 2 tasks:
+\begin{itemize}
+  \item Integrate the Qwen-3 LLM for retrieval-augmented response generation.
+  \item Implement citation tracking and context formatting.
+  \item Add evaluation metrics for precision, recall, and latency.
+  \item Begin development of a lightweight user interface demo.
+\end{itemize}
+
+\section{Summary}
+The Week 1 milestone was achieved successfully, producing a complete ingestion-to-retrieval backend for the RAG assistant. Subsequent efforts will focus on integrating generation models and performance evaluation.
+
+\section*{References}
+\begin{enumerate}
+\item Justin Kobza, John Ludeke, Daniel Vlassov, and Amber Wilt. 2025. \emph{EmbeddingGemma Powered RAG Assistant Project Proposal}. University of Illinois Urbana-Champaign.
+\end{enumerate}
+
+\end{document}

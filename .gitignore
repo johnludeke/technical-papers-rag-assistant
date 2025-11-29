@@ -98,6 +98,17 @@ $RECYCLE.BIN/
 *.log
 logs/
 
+# LaTeX build files
+*.aux
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# HuggingFace cache (large model files)
+~/.cache/huggingface/
+.cache/huggingface/
+
 # Testing
 .pytest_cache/
 .coverage

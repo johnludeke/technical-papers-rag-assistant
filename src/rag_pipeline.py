@@ -12,6 +12,7 @@ from .latex_parser import LatexParser, ProcessedDocument
 from .text_chunker import TextChunker, TextChunk
 from .embedding_pipeline import EmbeddingPipeline, EmbeddingResult
 from .vector_store import FAISSVectorStore, VectorStoreResult
+from .llm_generator import LLMGenerator, GeneratedResponse, GenerationConfig
 
 
 @dataclass
@@ -26,28 +27,41 @@ class RAGResult:
 class RAGPipeline:
     """Main RAG pipeline for document retrieval and question answering."""
     
-    def __init__(self, 
+    def __init__(self,
                  data_dir: str = "data",
                  vector_store_dir: str = "data/vector_stores",
-                 model_name: str = "google/gemma-2-2b-it"):
+                 embedding_model_name: str = "google/gemma-2-2b-it",
+                 llm_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct",
+                 use_llm: bool = True):
         """
         Initialize the RAG pipeline.
-        
+
         Args:
             data_dir: Directory for storing downloaded papers
             vector_store_dir: Directory for vector stores
-            model_name: Name of the embedding model
+            embedding_model_name: Name of the embedding model
+            llm_model_name: Name of the LLM for generation
+            use_llm: Whether to initialize LLM (can be disabled for embedding-only tasks)
         """
         self.data_dir = data_dir
         self.vector_store_dir = vector_store_dir
-        
+
         # Initialize components
         self.arxiv_client = ArxivClient(os.path.join(data_dir, "papers"))
         self.latex_parser = LatexParser()
         self.text_chunker = TextChunker()
-        self.embedding_pipeline = EmbeddingPipeline(model_name=model_name)
+        self.embedding_pipeline = EmbeddingPipeline(model_name=embedding_model_name)
         self.vector_store = None
-        
+        self.llm_generator = None
+
+        # Initialize LLM if requested
+        if use_llm:
+            try:
+                self.llm_generator = LLMGenerator(model_name=llm_model_name)
+            except Exception as e:
+                print(f"Warning: Could not load LLM ({e}). Generation features will be disabled.")
+                self.llm_generator = None
+
         os.makedirs(data_dir, exist_ok=True)
         os.makedirs(vector_store_dir, exist_ok=True)
     
@@ -209,38 +223,38 @@ class RAGPipeline:
         print(f"Loaded vector store with {self.vector_store.get_stats()['total_chunks']} chunks")
         return self.vector_store
     
-    def query(self, 
+    def query(self,
               query: str,
               top_k: int = 5,
               score_threshold: float = 0.0) -> RAGResult:
         """
-        Query the RAG system.
-        
+        Query the RAG system (retrieval only, no generation).
+
         Args:
             query: Query text
             top_k: Number of top results to return
             score_threshold: Minimum similarity threshold
-            
+
         Returns:
             RAG result with retrieved chunks and context
         """
         if self.vector_store is None:
             raise ValueError("Vector store not loaded. Call load_vector_store() first.")
-        
+
         # Generate query embedding
         query_embedding = self.embedding_pipeline.generate_embedding(query)
-        
+
         # Search vector store
         retrieved_chunks = self.vector_store.search(
-            query_embedding, 
-            top_k=top_k, 
+            query_embedding,
+            top_k=top_k,
             score_threshold=score_threshold
         )
-        
+
         # Build context
         context_parts = []
         sources = []
-        
+
         for chunk in retrieved_chunks:
             context_parts.append(f"[{chunk.chunk_id}] {chunk.text}")
             sources.append({
@@ -248,15 +262,66 @@ class RAGPipeline:
                 'score': chunk.score,
                 'metadata': chunk.metadata
             })
-        
+
         context = "\n\n".join(context_parts)
-        
+
         return RAGResult(
             query=query,
             retrieved_chunks=retrieved_chunks,
             context=context,
             sources=sources
         )
+
+    def query_with_generation(self,
+                             query: str,
+                             top_k: int = 5,
+                             score_threshold: float = 0.0,
+                             generation_config: Optional[GenerationConfig] = None) -> GeneratedResponse:
+        """
+        Query the RAG system with LLM generation.
+
+        Args:
+            query: Query text
+            top_k: Number of top results to return
+            score_threshold: Minimum similarity threshold
+            generation_config: Configuration for LLM generation
+
+        Returns:
+            Generated response with citations
+        """
+        if self.vector_store is None:
+            raise ValueError("Vector store not loaded. Call load_vector_store() first.")
+
+        if self.llm_generator is None:
+            raise ValueError("LLM not initialized. Set use_llm=True when creating pipeline.")
+
+        # Generate query embedding
+        query_embedding = self.embedding_pipeline.generate_embedding(query)
+
+        # Search vector store
+        retrieved_chunks = self.vector_store.search(
+            query_embedding,
+            top_k=top_k,
+            score_threshold=score_threshold
+        )
+
+        # Convert to format expected by LLM generator
+        chunks_for_llm = []
+        for chunk in retrieved_chunks:
+            chunks_for_llm.append({
+                'text': chunk.text,
+                'score': chunk.score,
+                'metadata': chunk.metadata
+            })
+
+        # Generate response
+        response = self.llm_generator.generate_response(
+            query=query,
+            retrieved_chunks=chunks_for_llm,
+            config=generation_config
+        )
+
+        return response
     
     def build_complete_pipeline(self, 
                                query: str = "transformer attention",
