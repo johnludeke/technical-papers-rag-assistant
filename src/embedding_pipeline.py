@@ -9,6 +9,7 @@ import torch
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import pickle
+import huggingface_hub
 
 
 @dataclass
@@ -23,7 +24,7 @@ class EmbeddingPipeline:
     """Pipeline for generating embeddings using EmbeddingGemma."""
     
     def __init__(self, 
-                 model_name: str = "google/gemma-2-2b-it",
+                 model_name: str = "google/embeddinggemma-300m",
                  device: str = "auto",
                  batch_size: int = 32):
         """
@@ -54,8 +55,10 @@ class EmbeddingPipeline:
             # Try to load EmbeddingGemma, fallback to a similar model if not available
             try:
                 self.model = SentenceTransformer(self.model_name)
-            except:
+                
+            except Exception as e:
                 # Fallback to a good embedding model for scientific text
+                print(e)
                 print("EmbeddingGemma not available, using alternative model...")
                 self.model = SentenceTransformer('all-MiniLM-L6-v2')
             

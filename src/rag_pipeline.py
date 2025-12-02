@@ -30,7 +30,7 @@ class RAGPipeline:
     def __init__(self,
                  data_dir: str = "data",
                  vector_store_dir: str = "data/vector_stores",
-                 embedding_model_name: str = "google/gemma-2-2b-it",
+                 embedding_model_name: str = "google/embeddinggemma-300m",
                  llm_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct",
                  use_llm: bool = True):
         """
@@ -250,12 +250,14 @@ class RAGPipeline:
             top_k=top_k,
             score_threshold=score_threshold
         )
+        
 
         # Build context
         context_parts = []
         sources = []
 
         for chunk in retrieved_chunks:
+            # print(chunk.score)
             context_parts.append(f"[{chunk.chunk_id}] {chunk.text}")
             sources.append({
                 'chunk_id': chunk.chunk_id,
