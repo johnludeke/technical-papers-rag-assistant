@@ -25,7 +25,7 @@ def main():
     try:
         # Try with smaller model first
         pipeline = RAGPipeline(
-            embedding_model_name="sentence-transformers/all-MiniLM-L6-v2",
+            embedding_model_name="google/embeddinggemma-300m",
             llm_model_name="Qwen/Qwen2.5-1.5B-Instruct",
             use_llm=True
         )
@@ -34,7 +34,7 @@ def main():
         print(f"   Warning: Could not initialize full pipeline: {e}")
         print("   Trying with embedding-only mode...")
         pipeline = RAGPipeline(
-            embedding_model_name="sentence-transformers/all-MiniLM-L6-v2",
+            embedding_model_name="google/embeddinggemma-300m",
             use_llm=False
         )
         print("   Pipeline initialized in embedding-only mode")

@@ -29,7 +29,7 @@ The EmbeddingGemma Powered RAG Assistant is now a complete retrieval-augmented g
 │                                  │                          │
 │   • SentenceTransformer          │                          │
 │   • EmbeddingGemma               │                          │
-│   • 384-dim vectors              │                          │
+│   • 768-dim vectors              │                          │
 └────────────┬─────────────────────┘                          │
              │                                                 │
              │ 2. Vector Search                               │
@@ -276,7 +276,7 @@ Total (8-bit):                ~1.8 GB
    Input: "What is attention mechanism?"
 
 2. Query Embedding
-   Vector: [0.123, -0.456, 0.789, ...] (384-dim)
+   Vector: [0.123, -0.456, 0.789, ...] (768-dim)
 
 3. Vector Search
    Top 5 chunks retrieved:

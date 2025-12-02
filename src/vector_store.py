@@ -24,7 +24,7 @@ class FAISSVectorStore:
     """FAISS-based vector store for embeddings."""
     
     def __init__(self, 
-                 dimension: int = 384,  # Default for all-MiniLM-L6-v2
+                 dimension: int = 768, 
                  index_type: str = "flat"):
         """
         Initialize the vector store.
@@ -41,6 +41,8 @@ class FAISSVectorStore:
         self.chunk_ids = []
         
         self._initialize_index()
+        
+        
     
     def _initialize_index(self):
         """Initialize the FAISS index."""
@@ -57,6 +59,7 @@ class FAISSVectorStore:
             self.index = faiss.IndexHNSWFlat(self.dimension, 32)
         else:
             raise ValueError(f"Unsupported index type: {self.index_type}")
+        
     
     def add_embeddings(self, 
                       embeddings: List[np.ndarray],
@@ -114,6 +117,12 @@ class FAISSVectorStore:
         query_embedding = query_embedding.astype('float32').reshape(1, -1)
         
         # Search
+        if query_embedding.dtype != 'float32':
+            query_embedding = query_embedding.astype('float32')
+            
+        self.index.d = 768  # Ensure index dimension is set correctly, this is hacky, consider fixing
+
+
         scores, indices = self.index.search(query_embedding, top_k)
         
         results = []
@@ -130,6 +139,7 @@ class FAISSVectorStore:
                     text=self.text_store[chunk_id]
                 )
                 results.append(result)
+        
         
         return results
     
@@ -253,7 +263,7 @@ class VectorStoreManager:
     
     def create_store(self, 
                     store_name: str,
-                    dimension: int = 384,
+                    dimension: int = 768,
                     index_type: str = "flat") -> FAISSVectorStore:
         """
         Create a new vector store.
@@ -310,7 +320,7 @@ class VectorStoreManager:
 def main():
     """Test the vector store."""
     # Create sample embeddings
-    dimension = 384
+    dimension = 768
     num_embeddings = 100
     
     embeddings = [np.random.rand(dimension) for _ in range(num_embeddings)]

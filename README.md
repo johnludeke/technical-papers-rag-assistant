@@ -34,7 +34,12 @@ Sources:
 ### 1. Install
 
 ```bash
+# Built on Python 3.11.7
 pip install -r requirements.txt
+
+# You will need to go to HugginFace and generate an access token for your account that has access granted to EmbeddingGemma, then paste it here.
+hf auth logins
+
 ```
 
 ### 2. Test (No Downloads)
