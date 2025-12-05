@@ -65,25 +65,31 @@ class RAGPipeline:
         os.makedirs(data_dir, exist_ok=True)
         os.makedirs(vector_store_dir, exist_ok=True)
     
-    def download_papers(self, 
-                       query: str = "transformer attention",
-                       max_papers: int = 15) -> List[PaperInfo]:
+    def download_papers(self,
+                       query: str = None,
+                       max_papers: int = 15,
+                       arxiv_ids: List[str] = None) -> List[PaperInfo]:
         """
         Download papers from arXiv.
-        
+
         Args:
-            query: Search query for papers
-            max_papers: Maximum number of papers to download
-            
+            query: Search query for papers (optional if arxiv_ids provided)
+            max_papers: Maximum number of papers to download (for search)
+            arxiv_ids: Specific arXiv IDs to download (e.g., ["1706.03762"])
+
         Returns:
             List of downloaded paper information
         """
-        print(f"Searching for papers with query: '{query}'")
-        papers = self.arxiv_client.search_ml_papers(query=query, max_results=max_papers)
-        
+        if arxiv_ids:
+            print(f"Fetching {len(arxiv_ids)} specific papers by ID...")
+            papers = self.arxiv_client.get_papers_by_ids(arxiv_ids)
+        else:
+            print(f"Searching for papers with query: '{query}'")
+            papers = self.arxiv_client.search_ml_papers(query=query, max_results=max_papers)
+
         print(f"Found {len(papers)} papers, downloading...")
         downloaded_papers = []
-        
+
         for paper in tqdm(papers, desc="Downloading papers"):
             try:
                 files = self.arxiv_client.download_paper(paper)
@@ -94,7 +100,7 @@ class RAGPipeline:
                     print(f"✗ No LaTeX source: {paper.title[:50]}...")
             except Exception as e:
                 print(f"✗ Failed to download {paper.title[:50]}: {e}")
-        
+
         print(f"Successfully downloaded {len(downloaded_papers)} papers with LaTeX sources")
         return downloaded_papers
     
@@ -325,25 +331,27 @@ class RAGPipeline:
 
         return response
     
-    def build_complete_pipeline(self, 
-                               query: str = "transformer attention",
+    def build_complete_pipeline(self,
+                               query: str = None,
                                max_papers: int = 15,
+                               arxiv_ids: List[str] = None,
                                store_name: str = "ml_papers") -> FAISSVectorStore:
         """
         Build the complete RAG pipeline from scratch.
-        
+
         Args:
-            query: Search query for papers
-            max_papers: Maximum number of papers to download
+            query: Search query for papers (optional if arxiv_ids provided)
+            max_papers: Maximum number of papers to download (for search)
+            arxiv_ids: Specific arXiv IDs to download (e.g., ["1706.03762"])
             store_name: Name of the vector store
-            
+
         Returns:
             Built FAISS vector store
         """
         print("Building complete RAG pipeline...")
-        
+
         # Step 1: Download papers
-        papers = self.download_papers(query=query, max_papers=max_papers)
+        papers = self.download_papers(query=query, max_papers=max_papers, arxiv_ids=arxiv_ids)
         
         # Step 2: Process papers
         processed_docs = self.process_papers(papers)

@@ -30,6 +30,9 @@ def main():
             use_llm=True
         )
         print("   Pipeline initialized successfully")
+        # Debug info
+        emb_dim = pipeline.embedding_pipeline.model.get_sentence_embedding_dimension()
+        print(f"   Embedding dimension: {emb_dim}")
     except Exception as e:
         print(f"   Warning: Could not initialize full pipeline: {e}")
         print("   Trying with embedding-only mode...")
@@ -48,9 +51,14 @@ def main():
         print("   This may take several minutes...")
 
         try:
-            vector_store = pipeline.build_complete_pipeline(
-                query="transformer attention mechanism",
-                max_papers=5,  # Start with fewer papers for faster testing
+            # Use specific arxiv IDs for important transformer papers
+            arxiv_ids = [
+                "1706.03762",  # Attention Is All You Need (original transformer)
+                "1810.04805",  # BERT
+                "2005.14165",  # GPT-3
+            ]
+            pipeline.build_complete_pipeline(
+                arxiv_ids=arxiv_ids,
                 store_name="ml_papers"
             )
             print("   Pipeline built successfully")

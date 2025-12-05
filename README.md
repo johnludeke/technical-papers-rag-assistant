@@ -37,8 +37,8 @@ Sources:
 # Built on Python 3.11.7
 pip install -r requirements.txt
 
-# You will need to go to HugginFace and generate an access token for your account that has access granted to EmbeddingGemma, then paste it here.
-hf auth logins
+# You will need to go to HuggingFace and generate an access token for your account that has access granted to EmbeddingGemma
+hf auth login
 
 ```
 
@@ -191,6 +191,8 @@ pipeline.build_complete_pipeline(
 ---
 
 ## Troubleshooting
+
+For detailed troubleshooting, see **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ### Out of Memory?
 

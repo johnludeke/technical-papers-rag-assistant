@@ -87,68 +87,150 @@ class LatexParser:
             'background': [r'\\section\{.*[Bb]ackground.*\}', r'\\section\{.*[Pp]reliminaries.*\}']
         }
     
+    def _resolve_inputs(self, content: str, base_dir: str, processed_files: set = None) -> str:
+        """
+        Recursively resolve \input{} and \include{} commands in LaTeX content.
+
+        Args:
+            content: LaTeX content
+            base_dir: Directory containing the .tex files
+            processed_files: Set of already processed files to avoid loops
+
+        Returns:
+            Content with all inputs resolved
+        """
+        if processed_files is None:
+            processed_files = set()
+
+        # Find all \input{} and \include{} commands
+        input_pattern = r'\\(?:input|include)\{([^}]+)\}'
+        matches = list(re.finditer(input_pattern, content))
+
+        # Process matches in reverse order to maintain correct positions
+        for match in reversed(matches):
+            filename = match.group(1)
+
+            # Add .tex extension if not present
+            if not filename.endswith('.tex'):
+                filename += '.tex'
+
+            # Check if already processed to avoid infinite loops
+            if filename in processed_files:
+                continue
+
+            # Try to find and read the file
+            file_path = os.path.join(base_dir, filename)
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        included_content = f.read()
+
+                    # Mark as processed
+                    processed_files.add(filename)
+
+                    # Recursively resolve inputs in the included file
+                    included_content = self._resolve_inputs(included_content, base_dir, processed_files)
+
+                    # Replace the \input command with the actual content
+                    content = content[:match.start()] + '\n' + included_content + '\n' + content[match.end():]
+                except Exception as e:
+                    print(f"Warning: Could not read included file {filename}: {e}")
+
+        return content
+
     def extract_tar_gz(self, tar_path: str) -> str:
         """Extract LaTeX source from tar.gz file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             with tarfile.open(tar_path, 'r:gz') as tar:
                 tar.extractall(temp_dir)
-                
-                # Find the main .tex file (usually the largest or most complex)
+
+                # Find the main .tex file
                 tex_files = []
+                main_candidates = []
+
                 for root, dirs, files in os.walk(temp_dir):
                     for file in files:
                         if file.endswith('.tex'):
                             tex_path = os.path.join(root, file)
-                            tex_files.append((tex_path, os.path.getsize(tex_path)))
-                
+                            file_size = os.path.getsize(tex_path)
+                            tex_files.append((tex_path, file_size))
+
+                            # Prefer common main file names
+                            if file.lower() in ['main.tex', 'ms.tex', 'paper.tex']:
+                                main_candidates.append((tex_path, file_size))
+
                 if not tex_files:
                     raise ValueError("No .tex files found in archive")
-                
-                # Get the largest .tex file (likely the main document)
-                main_tex = max(tex_files, key=lambda x: x[1])[0]
-                
+
+                # Use main.tex/ms.tex if found, otherwise use largest file
+                if main_candidates:
+                    main_tex = max(main_candidates, key=lambda x: x[1])[0]
+                else:
+                    main_tex = max(tex_files, key=lambda x: x[1])[0]
+
+                base_dir = os.path.dirname(main_tex)
+
                 with open(main_tex, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
-                
+
+                # Resolve all \input{} and \include{} commands
+                content = self._resolve_inputs(content, base_dir)
+
                 return content
     
     def clean_latex(self, latex_content: str) -> str:
         """Clean LaTeX content by removing commands and formatting."""
         content = latex_content
-        
+
+        # Remove LaTeX comments (lines starting with %)
+        content = re.sub(r'%.*$', '', content, flags=re.MULTILINE)
+
         # Remove LaTeX commands
         for pattern, replacement in self.latex_commands.items():
             content = re.sub(pattern, replacement, content, flags=re.DOTALL | re.IGNORECASE)
-        
+
+        # Remove remaining LaTeX figure/table references
+        content = re.sub(r'\[scale=[^\]]*\]\{[^}]*\}', '', content)  # [scale=0.6]{Figures/...}
+        content = re.sub(r'\\includegraphics[^\n]*', '', content)
+        content = re.sub(r'\\caption\{[^}]*\}', '', content)
+
         # Clean up extra whitespace
-        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)  # Multiple newlines
+        content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)  # Multiple newlines
         content = re.sub(r'[ \t]+', ' ', content)  # Multiple spaces/tabs
         content = re.sub(r'\n[ \t]+', '\n', content)  # Leading whitespace
-        
+        content = re.sub(r'^\s*\n', '', content, flags=re.MULTILINE)  # Empty lines
+
         return content.strip()
     
     def extract_sections(self, cleaned_text: str) -> List[DocumentSection]:
-        """Extract document sections from cleaned text."""
+        """Extract document sections from cleaned text, including subsections."""
         sections = []
-        
-        # Split by section markers
-        section_parts = re.split(r'\n##\s+([^\n]+)\n', cleaned_text)
-        
-        for i in range(1, len(section_parts), 2):
-            if i + 1 < len(section_parts):
-                title = section_parts[i].strip()
-                content = section_parts[i + 1].strip()
-                
-                # Determine section type
-                section_type = self._classify_section(title)
-                
-                if content:  # Only add non-empty sections
-                    sections.append(DocumentSection(
-                        title=title,
-                        content=content,
-                        section_type=section_type
-                    ))
-        
+
+        # Split by section markers (## for sections, ### for subsections, #### for subsubsections)
+        # Use a pattern that captures both the header level and title
+        section_pattern = r'\n(#{2,4})\s+([^\n]+)\n'
+        parts = re.split(section_pattern, cleaned_text)
+
+        # parts[0] is content before first section (usually preamble)
+        # Then alternates: level, title, content, level, title, content, ...
+        i = 1
+        while i < len(parts) - 2:
+            level_markers = parts[i]  # "##" or "###" or "####"
+            title = parts[i + 1].strip()
+            content = parts[i + 2].strip() if i + 2 < len(parts) else ""
+
+            # Determine section type
+            section_type = self._classify_section(title)
+
+            if content:  # Only add non-empty sections
+                sections.append(DocumentSection(
+                    title=title,
+                    content=content,
+                    section_type=section_type
+                ))
+
+            i += 3
+
         return sections
     
     def _classify_section(self, title: str) -> str:

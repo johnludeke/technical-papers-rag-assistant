@@ -24,9 +24,9 @@ class TextChunk:
 class TextChunker:
     """Text chunker for creating overlapping chunks of text."""
     
-    def __init__(self, 
+    def __init__(self,
                  chunk_size: int = 512,
-                 overlap_size: int = 50,
+                 overlap_size: int = 128,
                  model_name: str = "gpt-3.5-turbo"):
         """
         Initialize the text chunker.

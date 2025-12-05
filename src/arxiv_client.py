@@ -3,6 +3,7 @@ arXiv API client for downloading ML papers and LaTeX sources.
 """
 import arxiv
 import os
+import re
 import requests
 from typing import List, Dict, Optional
 from dataclasses import dataclass
@@ -30,26 +31,70 @@ class ArxivClient:
         self.download_dir = download_dir
         os.makedirs(download_dir, exist_ok=True)
         
-    def search_ml_papers(self, 
+    def get_papers_by_ids(self, arxiv_ids: List[str]) -> List[PaperInfo]:
+        """
+        Get specific papers by their arXiv IDs.
+
+        Args:
+            arxiv_ids: List of arXiv IDs (e.g., ["1706.03762", "1810.04805"])
+
+        Returns:
+            List of PaperInfo objects
+        """
+        client = arxiv.Client()
+        papers = []
+
+        for arxiv_id in arxiv_ids:
+            # Clean the ID - remove version number if present
+            clean_id = re.sub(r'v\d+$', '', arxiv_id)
+
+            search = arxiv.Search(id_list=[clean_id])
+
+            try:
+                result = next(client.results(search))
+
+                # Extract arXiv ID from URL and strip version number
+                result_id = result.entry_id.split('/')[-1]
+                # Remove version number (e.g., v1, v2, v7, v10, etc.)
+                result_id = re.sub(r'v\d+$', '', result_id)
+
+                paper_info = PaperInfo(
+                    arxiv_id=result_id,
+                    title=result.title,
+                    authors=[author.name for author in result.authors],
+                    abstract=result.summary,
+                    categories=result.categories,
+                    published=result.published.isoformat(),
+                    updated=result.updated.isoformat(),
+                    pdf_url=result.pdf_url,
+                    latex_url=self._get_latex_url(result_id)
+                )
+                papers.append(paper_info)
+            except Exception as e:
+                print(f"Failed to fetch paper {arxiv_id}: {e}")
+
+        return papers
+
+    def search_ml_papers(self,
                         query: str = "machine learning",
                         max_results: int = 20,
                         sort_by: arxiv.SortCriterion = arxiv.SortCriterion.Relevance,
                         sort_order: arxiv.SortOrder = arxiv.SortOrder.Descending) -> List[PaperInfo]:
         """
         Search for ML papers on arXiv.
-        
+
         Args:
             query: Search query (default: "machine learning")
             max_results: Maximum number of papers to return
             sort_by: How to sort results
             sort_order: Sort order (descending by default)
-            
+
         Returns:
             List of PaperInfo objects
         """
         # Create search query for ML papers
         search_query = f"cat:cs.LG OR cat:cs.AI OR cat:cs.CV OR cat:stat.ML AND {query}"
-        
+
         client = arxiv.Client()
         search = arxiv.Search(
             query=search_query,
@@ -57,12 +102,14 @@ class ArxivClient:
             sort_by=sort_by,
             sort_order=sort_order
         )
-        
+
         papers = []
         for result in client.results(search):
-            # Extract arXiv ID from URL
-            arxiv_id = result.entry_id.split('/')[-1].replace('v1', '').replace('v2', '').replace('v3', '')
-            
+            # Extract arXiv ID from URL and strip version number
+            arxiv_id = result.entry_id.split('/')[-1]
+            # Remove version number (e.g., v1, v2, v7, v10, etc.)
+            arxiv_id = re.sub(r'v\d+$', '', arxiv_id)
+
             paper_info = PaperInfo(
                 arxiv_id=arxiv_id,
                 title=result.title,
@@ -75,7 +122,7 @@ class ArxivClient:
                 latex_url=self._get_latex_url(arxiv_id)
             )
             papers.append(paper_info)
-            
+
         return papers
     
     def _get_latex_url(self, arxiv_id: str) -> Optional[str]:
